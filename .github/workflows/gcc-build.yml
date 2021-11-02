@@ -1,0 +1,22 @@
+name: GCC Build x64
+on: [push, pull-request, workflow_dispatch]
+
+jobs:
+  GCC-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup GCC
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: latest
+          platform: x64
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+      - name: Check out repository code
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: CMake generate build files
+        run: cmake .
+      - name: CMake build
+        run: cmake --build
