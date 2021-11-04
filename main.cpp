@@ -1,7 +1,7 @@
 #include <cstddef>
 #include <cstdlib>
-#include <string>
 #include <cstring>
+#include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
@@ -13,7 +13,7 @@ using u64 = std::uint64_t;
 
 struct parse_error
 {
-    const size_t column;
+    const size_t column_offset;
     const size_t length;
     const std::string message;
 };
@@ -75,6 +75,16 @@ struct parser
         const parse_context_for_single_file& context) = 0;
 };
 
+struct fail_parser : parser<char>
+{
+    virtual parse_result<char> parse(
+        const parse_context_for_single_file& context) override
+    {
+        return parse_error{0, context.get_remaining_of_line().length(),
+                           "Fail parser invoked"};
+    }
+};
+
 // inefficient i64 parser just for demonstration
 struct integer_parser : parser<i64>
 {
@@ -106,11 +116,12 @@ struct integer_parser : parser<i64>
 
 int main()
 {
-    integer_parser parser;
+    integer_parser int_parser;
+    fail_parser failer;
     const std::string input = "a123asdasd123a";
     parse_context_for_single_file context = {"no-file",
                                              {"123asdasd123a", "text123"}};
-    const parse_result<i64> res = parser.parse(context);
+    const parse_result<i64> res = int_parser.parse(context);
 
     switch (res.index())
     {
@@ -124,14 +135,28 @@ int main()
                 "remaining  str: %s\n",
                 succ.value, succ.consumedChars,
                 context.get_remaining_of_line().data());
+
+            printf("Invoking fail parser:\n");
+
+            const parse_error fail = std::get<1>(failer.parse(context));
+            const std::string spaces =
+                repeated(' ', context.consumed_from_current_line +
+                                  fail.column_offset + 1);
+            const std::string underlining = repeated('^', fail.length);
+            printf("@%s : %lld\nMessage: %s\n\t %s\n\t%s%s\n",
+                   context.filename.data(), context.get_current_line_number(),
+                   fail.message.data(), context.get_current_line().data(),
+                   spaces.data(), underlining.data());
         }
         break;
         case 1:
         {
             parse_error err = std::get<1>(res);
-            const std::string spaces = repeated(' ', err.column + 1);
+            const std::string spaces =
+                repeated(' ', context.consumed_from_current_line +
+                                  err.column_offset + 1);
             const std::string underlining = repeated('^', err.length);
-            printf("@%s : %lld\nMessage: %s\n\t %s\n\t%s%s",
+            printf("@%s : %lld\nMessage: %s\n\t %s\n\t%s%s\n",
                    context.filename.data(), context.get_current_line_number(),
                    err.message.data(), context.get_current_line().data(),
                    spaces.data(), underlining.data());
@@ -148,7 +173,7 @@ int main()
 
     context.advance_line();
 
-    const parse_result<i64> res2 = parser.parse(context);
+    const parse_result<i64> res2 = int_parser.parse(context);
 
     switch (res2.index())
     {
@@ -167,9 +192,11 @@ int main()
         case 1:
         {
             parse_error err = std::get<1>(res2);
-            const std::string spaces = repeated(' ', err.column + 1);
+            const std::string spaces =
+                repeated(' ', context.consumed_from_current_line +
+                                  err.column_offset + 1);
             const std::string underlining = repeated('^', err.length);
-            printf("@%s : %ulld\nMessage: %s\n\t %s\n\t%s%s",
+            printf("@%s : %lld\nMessage: %s\n\t %s\n\t%s%s\n",
                    context.filename.data(), context.get_current_line_number(),
                    err.message.data(), context.get_current_line().data(),
                    spaces.data(), underlining.data());
