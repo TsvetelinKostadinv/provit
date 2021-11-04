@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <string>
+#include <cstring>
 #include <string_view>
 #include <variant>
 #include <vector>
@@ -168,7 +169,7 @@ int main()
             parse_error err = std::get<1>(res2);
             const std::string spaces = repeated(' ', err.column + 1);
             const std::string underlining = repeated('^', err.length);
-            printf("@%s : %lld\nMessage: %s\n\t %s\n\t%s%s",
+            printf("@%s : %ulld\nMessage: %s\n\t %s\n\t%s%s",
                    context.filename.data(), context.get_current_line_number(),
                    err.message.data(), context.get_current_line().data(),
                    spaces.data(), underlining.data());
