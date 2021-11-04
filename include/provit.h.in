@@ -1,0 +1,2 @@
+#define provit_VERSION_MAJOR @provit_VERSION_MAJOR@
+#define provit_VERSION_MINOR @provit_VERSION_MINOR@
