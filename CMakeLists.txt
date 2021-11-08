@@ -26,6 +26,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ./include ${PROJECT_BINARY_DI
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4) #  /WX
+    # add_definitions()
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion) # -Werror
 endif()

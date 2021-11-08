@@ -5,6 +5,7 @@
 #include <string_view>
 #include <variant>
 #include <vector>
+#include <exception>
 
 #include "parse_result.h"
 #include "provit.h"
