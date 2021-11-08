@@ -26,6 +26,14 @@ struct parse_success
     size_t consumedChars;
 };
 
+// Specialization for when the parser
+// doesn't produce any part of the AST
+template <>
+struct parse_success<void>
+{
+    size_t consumedChars;
+};
+
 template <typename left, typename right>
 using either = std::variant<left, right>;
 

@@ -45,13 +45,38 @@ struct parse_context_for_single_file
 template <typename out>
 struct parser
 {
+    // Parses a given part of the input context
+    // produces either a parse success or a parse error
+    // intentionally does not consume the characters from the
+    // context so as to give greater freedom to the end user
     virtual parse_result<out> parse(
         const parse_context_for_single_file& context) = 0;
+
+    parse_result<out> parseAndConsume(parse_context_for_single_file& context)
+    {
+        parse_result<out> res = parse(context);
+        switch (res.index())
+        {
+            case 0:
+            {
+                context.consume(std::get<0>(res).consumedChars);
+            }
+            break;
+            case 1:
+            {
+                // we do nothing
+            }
+            break;
+            default:
+                throw std::exception("Should be unreachable!!");
+        }
+        return res;
+    }
 };
 
-struct fail_parser : parser<char>
+struct fail_parser : parser<void>
 {
-    virtual parse_result<char> parse(
+    virtual parse_result<void> parse(
         const parse_context_for_single_file& context) override
     {
         return parse_error{0, context.get_remaining_of_line().length(),
@@ -88,22 +113,54 @@ struct integer_parser : parser<i64>
     }
 };
 
+struct text_parser : parser<void>
+{
+    const std::string text;
+    const size_t textLen;
+
+    text_parser(const std::string& text) : text(text), textLen(text.length()) {}
+
+    virtual parse_result<void> parse(
+        const parse_context_for_single_file& context) override
+    {
+        const std::string_view currLine = context.get_remaining_of_line();
+        if (currLine.length() < textLen)
+        {
+            return parse_error{0, currLine.length(),
+                               "Expected \"" + text +
+                                   "\" got: " + std::string(currLine.data())};
+        }
+
+        for (size_t i = 0; i < textLen; ++i)
+        {
+            if (text[i] != currLine[i])
+            {
+                return parse_error{0, textLen,
+                                   "Expected \"" + text + "\" got: " +
+                                       std::string(currLine.data())};
+            }
+        }
+
+        return parse_success<void>{textLen};
+    }
+};
+
 int main()
 {
     integer_parser int_parser;
+    text_parser txt_parser("text");
     fail_parser failer;
     const std::string input = "a123asdasd123a";
     parse_context_for_single_file context = {"no-file",
                                              {"123asdasd123a", "text123"}};
-    const parse_result<i64> res = int_parser.parse(context);
+    const parse_result<i64> res = int_parser.parseAndConsume(context);
 
     switch (res.index())
     {
         case 0:
         {
             // we got an integer
-            parse_success<i64> succ = std::get<0>(res);
-            context.consume(succ.consumedChars);
+            const parse_success<i64>& succ = std::get<0>(res);
             printf(
                 "parsed integer: %lld, parsed chars count: %lld, "
                 "remaining  str: %s\n",
@@ -112,7 +169,8 @@ int main()
 
             printf("Invoking fail parser:\n");
 
-            const parse_error fail = std::get<1>(failer.parse(context));
+            const parse_result<void> failRes = failer.parseAndConsume(context);
+            const parse_error& fail = std::get<1>(failRes);
             const std::string spaces =
                 repeated(' ', context.consumed_from_current_line +
                                   fail.column_offset + 1);
@@ -125,7 +183,7 @@ int main()
         break;
         case 1:
         {
-            parse_error err = std::get<1>(res);
+            const parse_error& err = std::get<1>(res);
             const std::string spaces =
                 repeated(' ', context.consumed_from_current_line +
                                   err.column_offset + 1);
@@ -147,25 +205,30 @@ int main()
 
     context.advance_line();
 
-    const parse_result<i64> res2 = int_parser.parse(context);
+    const parse_result<void> res2 = txt_parser.parseAndConsume(context);
 
     switch (res2.index())
     {
         case 0:
         {
-            // we got an integer
-            parse_success<i64> succ = std::get<0>(res2);
-            context.consume(succ.consumedChars);
+            // we got a success
+            const parse_success<void>& succ = std::get<0>(res2);
+            printf("Successfully parsed text with %lld chars",
+                   succ.consumedChars);
+
+            const parse_result<i64> intParsed =
+                int_parser.parseAndConsume(context);
+            const parse_success<i64>& integer = std::get<0>(intParsed);
             printf(
                 "parsed integer: %lld, parsed chars count: %lld, "
                 "remaining  str: %s\n",
-                succ.value, succ.consumedChars,
+                integer.value, integer.consumedChars,
                 context.get_remaining_of_line().data());
         }
         break;
         case 1:
         {
-            parse_error err = std::get<1>(res2);
+            const parse_error& err = std::get<1>(res2);
             const std::string spaces =
                 repeated(' ', context.consumed_from_current_line +
                                   err.column_offset + 1);
