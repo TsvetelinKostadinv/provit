@@ -30,6 +30,7 @@ struct parse_context_for_single_file
     std::string_view get_line(size_t row) const { return lines[row - 1]; }
 
     void consume(size_t consumed) { consumed_from_current_line += consumed; }
+
     std::string_view get_remaining_of_line() const
     {
         return get_current_line().substr(consumed_from_current_line);
@@ -145,8 +146,16 @@ struct text_parser : parser<void>
     }
 };
 
+std::string repeated(char ch, size_t cnt)
+{
+    return std::string(cnt, ch);
+}
+
 int main()
 {
+    printf("Starting provit v%d.%d\n", provit_VERSION_MAJOR,
+           provit_VERSION_MINOR);
+
     integer_parser int_parser;
     text_parser txt_parser("text");
     fail_parser failer;

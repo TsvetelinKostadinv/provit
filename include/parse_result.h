@@ -10,15 +10,6 @@ struct parse_error
     const std::string message;
 };
 
-std::string repeated(char ch, size_t cnt)
-{
-    std::string res;
-    res.resize(cnt + 1);
-    memset(res.data(), ch, cnt);
-    res[cnt] = 0;
-    return res;
-}
-
 template <typename out>
 struct parse_success
 {
