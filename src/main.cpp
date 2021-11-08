@@ -1,11 +1,12 @@
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
-#include <exception>
 
 #include "parse_result.h"
 #include "provit.h"
@@ -70,7 +71,7 @@ struct parser
             }
             break;
             default:
-                throw std::exception("Should be unreachable!!");
+                assert(false && "Should be unreachable");
         }
         return res;
     }
